@@ -82,7 +82,7 @@ npm run secrets:upload
 
 Worker menggunakan driver `@neondatabase/serverless` melalui HTTPS. Dashboard mengakses Neon melalui Worker; connection string tidak pernah dikirim ke browser.
 
-Ingest cloud menolak sementara dengan HTTP 503 selama connection string Neon belum dikonfigurasi. Bridge mempertahankan data pada spool lokal sehingga antrean cloud tidak dipenuhi retry konfigurasi yang belum selesai. `LOCAL_PRIMARY_ONLY=true` di `.dev.vars` hanya mengizinkan pengujian lokal tanpa Neon; script upload secrets tidak mengirim opsi ini ke cloud.
+Ingest tetap menerima data ketika Neon belum dikonfigurasi. Consumer menyimpan data ke D1 dan mencatat replikasi yang tertunda di tabel `backup_pending`. Dashboard menampilkan pembacaan dari D1; pemeriksaan antar-cloud belum tersedia sampai Neon terhubung.
 
 ## Cloudflare
 
@@ -103,9 +103,9 @@ Untuk akun lain, buat database dan dua antrean baru dengan Wrangler; ubah `accou
 
 ## Retry dan cadangan
 
-Consumer mencoba penulisan D1 dan Neon secara independen. Pesan diakui hanya setelah keduanya berhasil. Penulisan ulang dengan ID dan hash sama tidak membuat baris ganda. ID sama dengan hash berbeda ditolak dan perlu investigasi.
+Consumer mencoba penulisan D1 dan Neon secara independen. Pesan diakui setelah D1 tersimpan dan backup berhasil atau pekerjaan backup tercatat secara persisten di D1. Scheduled Worker setiap menit mencoba hingga 20 pekerjaan backup tertunda, lalu menghapus pekerjaan hanya setelah hash salinan Neon cocok. Jika D1 atau pencatatan pekerjaan gagal, pesan Queue dicoba ulang. Penulisan ulang dengan ID dan hash sama tidak membuat baris ganda. ID sama dengan hash berbeda ditolak dan perlu investigasi.
 
-Setelah 20 retry, pesan masuk `tp2-iot-dead-letter`. Antrean ini menyimpan pesan terbatas waktu (Cloudflare mendokumentasikan 4 hari untuk DLQ tanpa consumer). Pantau antrean dan replay pesan setelah layanan pulih; retry ini bukan jaminan penyimpanan tanpa batas. Cadangan Neon adalah salinan pembacaan aktif; belum mencakup backup otomatis seluruh schema atau pemulihan bencana lengkap.
+Jika penulisan utama gagal setelah 20 retry, pesan masuk `tp2-iot-dead-letter`. Antrean ini menyimpan pesan terbatas waktu (Cloudflare mendokumentasikan 4 hari untuk DLQ tanpa consumer). Pantau antrean dan replay pesan setelah layanan pulih; retry ini bukan jaminan penyimpanan tanpa batas. Cadangan Neon adalah salinan pembacaan aktif; belum mencakup backup otomatis seluruh schema atau pemulihan bencana lengkap.
 
 Jika D1 gagal dibaca, API mengembalikan data Neon. Jika salah satu cloud tidak dapat dibaca, status integritas menjadi belum terverifikasi. Hosting, API, dan antrean masih bergantung pada Cloudflare; gangguan menyeluruh Cloudflare tidak diatasi oleh fallback database ini.
 
@@ -142,7 +142,7 @@ npm test
 npm run test:pipeline
 ```
 
-Pipeline menggunakan broker MQTT lokal pada port 1884 dan data sintetis di D1 lokal. Tidak menulis data uji ke database produksi. Retry Neon dapat tetap terlihat di log lokal jika Neon belum dikonfigurasi.
+Pipeline menggunakan broker MQTT lokal pada port 1884 dan data sintetis di D1 lokal. Tidak menulis data uji ke database produksi. Replikasi Neon tertunda disimpan di D1 lokal jika Neon belum dikonfigurasi.
 
 `scripts/demo-publisher.js` tersedia untuk demo sintetis eksplisit melalui MQTT. Jalankan hanya dengan namespace dan lingkungan demo terpisah: `CONFIRM_SYNTHETIC=yes npm run demo`. Ini tidak menggantikan simulasi Wokwi.
 
@@ -153,3 +153,5 @@ Pipeline menggunakan broker MQTT lokal pada port 1884 dan data sintetis di D1 lo
 - `GET /api/health`: status konfigurasi tanpa membocorkan secret.
 
 Dokumentasi sumber: [Wokwi WiFi](https://docs.wokwi.com/guides/esp32-wifi), [Cloudflare D1](https://developers.cloudflare.com/d1/worker-api/), [Cloudflare Queues DLQ](https://developers.cloudflare.com/queues/configuration/dead-letter-queues/), [Neon serverless driver](https://neon.com/blog/serverless-driver-ga).
+
+Jadwal replikasi memakai [Cloudflare Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/). Perubahan jadwal dapat memerlukan waktu propagasi.

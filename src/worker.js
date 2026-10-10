@@ -35,7 +35,6 @@ export default {
       if (path === '/api/ingest' && request.method === 'POST') {
         if (!env.INGEST_TOKEN || env.INGEST_TOKEN.length < 32) return json({ error: 'Ingest belum dikonfigurasi' }, 503);
         if (request.headers.get('Authorization') !== `Bearer ${env.INGEST_TOKEN}`) return json({ error: 'Unauthorized' }, 401);
-        if (!env.NEON_DATABASE_URL && env.LOCAL_PRIMARY_ONLY !== 'true') return json({ error: 'Neon belum dikonfigurasi; bridge akan menyimpan pesan untuk retry' }, 503);
         if (!env.READINGS) return json({ error: 'Antrean belum dikonfigurasi' }, 503);
         const text = await request.text();
         if (text.length > 4096) return json({ error: 'Payload terlalu besar' }, 413);
@@ -54,8 +53,28 @@ export default {
   async queue(batch, env) {
     for (const msg of batch.messages) {
       const result = await Promise.allSettled([writePrimary(env.DB, msg.body), writeBackup(env.NEON_DATABASE_URL, msg.body)]);
-      if (result.every(r => r.status === 'fulfilled')) msg.ack();
-      else { console.warn('Replication retry', msg.body.id, result.map(r => r.status)); msg.retry({ delaySeconds: 30 }); }
+      if (result[0].status === 'fulfilled') {
+        try {
+          if (result[1].status === 'fulfilled') await env.DB.prepare('DELETE FROM backup_pending WHERE id = ?').bind(msg.body.id).run();
+          else await env.DB.prepare('INSERT INTO backup_pending (id, payload) VALUES (?, ?) ON CONFLICT(id) DO NOTHING').bind(msg.body.id, JSON.stringify(msg.body)).run();
+          msg.ack();
+        } catch { msg.retry({ delaySeconds: 30 }); }
+      } else {
+        console.warn('Primary storage retry', msg.body.id);
+        msg.retry({ delaySeconds: 30 });
+      }
     }
+  },
+  async scheduled(_event, env) {
+    if (!env.NEON_DATABASE_URL) return;
+    const pending = await env.DB.prepare('SELECT id, payload FROM backup_pending ORDER BY last_attempt, id LIMIT 20').all();
+    await Promise.all(pending.results.map(async item => {
+      try {
+        await writeBackup(env.NEON_DATABASE_URL, normalize(JSON.parse(item.payload)));
+        await env.DB.prepare('DELETE FROM backup_pending WHERE id = ?').bind(item.id).run();
+      } catch {
+        await env.DB.prepare('UPDATE backup_pending SET last_attempt = unixepoch() WHERE id = ?').bind(item.id).run();
+      }
+    }));
   }
 };

@@ -82,3 +82,10 @@
 
 
 Deploy terbaru: f16f7a6d-cd49-4355-9061-6fc1f8db7b8d. Pemeriksaan sintaks JavaScript dan git diff --check lulus.
+
+## Perbaikan ketersediaan penyimpanan utama
+
+- PASS: 13 pengujian backend, termasuk ingest tanpa Neon, penyimpanan D1 dan pekerjaan backup persisten, kegagalan D1, serta pemulihan replikasi terjadwal.
+- PASS: pemeriksaan sintaks JavaScript.
+- Kebijakan sebelumnya yang menolak ingest tanpa Neon sudah diganti. Data utama tampil melalui D1, dan replikasi tertunda tersimpan pada backup_pending.
+- PASS: deploy perbaikan versi d8e844a9-3bbd-404b-b905-88ab816b3212. Payload Wokwi A:48880bf6c68a3f50:26 diterima antrean dan tampil di API produksi dari D1, suhu 26 C dan kelembapan 60%, sementara Neon not-configured.
