@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="id">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><title>TP2 IoT · Monitoring tiga lokasi</title><link rel="stylesheet" href="/style.css"><script src="/app.js" type="module"></script></head>
+<body>
+<header><div><p class="eyebrow">TP2 / IRSYAAD</p><h1>Monitoring tiga lokasi</h1><p class="muted">ESP32 + DHT22 · MQTT · Cloudflare D1 · Neon</p></div></header>
+<main>
+<div class="toolbar"><p id="connection" role="status">Memuat pembacaan sensor…</p><div class="actions"><button id="refresh" type="button">Perbarui data</button><button id="pause" type="button">Jeda pembaruan</button></div></div>
+<p id="error" role="alert" hidden></p>
+<section aria-label="Pembacaan terbaru" id="locations" class="locations"></section>
+<section class="history"><div class="section-head"><div><h2>Riwayat sensor</h2><p class="muted">Maksimal 60 pembacaan terakhir per lokasi.</p></div><div class="actions"><label>Lokasi <select id="location"><option value="A">Lokasi A</option><option value="B">Lokasi B</option><option value="C">Lokasi C</option></select></label><label>Pengukuran <select id="metric"><option value="temp_centi">Suhu (°C)</option><option value="humidity_centi">Kelembapan (%)</option></select></label></div></div><div id="chart" aria-live="polite"></div></section>
+<section class="clouds" aria-label="Status penyimpanan"><div><h2>Cloud A / D1</h2><p id="primary">Memeriksa…</p></div><div><h2>Cloud B / Neon</h2><p id="backup">Memeriksa…</p></div><div><h2>Pemeriksaan integritas</h2><p id="integrity">Menunggu data</p><p class="muted small">Hash dihitung ulang dan dibandingkan antar-cloud. Ini rantai hash SHA-256, tanpa acuan blockchain independen.</p></div></section>
+<section><div class="section-head"><div><h2>Jejak pembacaan</h2><p class="muted">Pembacaan terbaru untuk lokasi yang dipilih.</p></div><button id="export" type="button" disabled>Unduh CSV lokasi</button></div><div class="table-wrap" tabindex="0" aria-label="Tabel pembacaan, dapat digulir"><table><thead><tr><th>Waktu</th><th>Suhu</th><th>Kelembapan</th><th>D1 / Neon</th><th>Integritas</th><th>Detail</th></tr></thead><tbody id="readings"></tbody></table></div><p id="empty" class="empty">Menunggu data sensor. Jalankan Wokwi dan bridge MQTT untuk menerima pembacaan.</p></section>
+</main><footer>tp2-iot-irsyaad.syaad.dev · Pembaruan otomatis setiap 5 detik · <span id="updated">Belum diperbarui</span></footer>
+<dialog id="detail"><div class="section-head"><h2>Detail verifikasi</h2><button id="close" type="button">Tutup</button></div><dl id="detail-fields"></dl><p class="muted small">Pendahulu di luar jendela riwayat belum diperiksa. Kecocokan hash tidak membuktikan identitas pengirim atau bahwa nilai sensor benar.</p></dialog>
+</body></html>
