@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tp2-iot-irsyaad",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "account_id": "a6c52449117577ca02a3cca22e91ceb7",
+  "routes": [{ "pattern": "tp2-iot-irsyaad.syaad.dev", "custom_domain": true }],
+  "assets": { "directory": "public", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  "d1_databases": [{ "binding": "DB", "database_name": "tp2-iot-primary", "database_id": "966d4686-8883-4a4e-962d-83ba7eb93bf3", "migrations_dir": "migrations" }],
+  "queues": {
+    "producers": [{ "binding": "READINGS", "queue": "tp2-iot-readings" }],
+    "consumers": [{ "queue": "tp2-iot-readings", "max_batch_size": 10, "max_batch_timeout": 1, "max_retries": 20, "retry_delay": 30, "dead_letter_queue": "tp2-iot-dead-letter" }]
+  }
+}
