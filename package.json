@@ -1,0 +1,32 @@
+{
+  "name": "tp2-iot-irsyaad",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "dev": "wrangler dev --ip 127.0.0.1",
+    "test": "node --test tests/*.test.js",
+    "check": "node --check src/worker.js && node --check public/app.js && node --check bridge/index.js",
+    "build": "wrangler deploy --dry-run --outdir ../../work/worker-build",
+    "deploy": "wrangler deploy",
+    "setup:local": "node scripts/setup-local.js",
+    "secrets:upload": "node scripts/upload-secrets.js",
+    "test:pipeline": "node tests/local-pipeline.mjs",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "db:remote": "wrangler d1 migrations apply DB --remote",
+    "db:neon": "node --env-file=.dev.vars scripts/neon-migrate.js",
+    "bridge": "node --env-file=bridge/.env bridge/index.js",
+    "demo": "node --env-file=bridge/.env scripts/demo-publisher.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.0",
+    "mqtt": "^5.10.0"
+  },
+  "devDependencies": {
+    "aedes": "^1.2.0",
+    "wrangler": "^4.0.0"
+  }
+}

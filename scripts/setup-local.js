@@ -1,0 +1,11 @@
+import { readFile,writeFile,access } from 'node:fs/promises';
+import { randomBytes } from 'node:crypto';
+const root=new URL('../',import.meta.url);
+const exists=async path=>{try{await access(path);return true;}catch{return false;}};
+const secretFile=new URL('.dev.vars',root);
+if(!await exists(secretFile))await writeFile(secretFile,`INGEST_TOKEN=${randomBytes(32).toString('hex')}\nLOCAL_PRIMARY_ONLY=true\n`,{mode:0o600});
+const text=await readFile(secretFile,'utf8'),token=text.match(/^INGEST_TOKEN=(.+)$/m)?.[1];
+if(!token)throw new Error('INGEST_TOKEN tidak ditemukan di .dev.vars');
+const bridgeFile=new URL('bridge/.env',root);
+if(!await exists(bridgeFile))await writeFile(bridgeFile,(await readFile(new URL('bridge/.env.example',root),'utf8')).replace('replace-with-a-random-secret-at-least-32-characters',token),{mode:0o600});
+console.log('Konfigurasi lokal tersedia. Secret tidak dicetak. File yang sudah ada tidak ditimpa.');
