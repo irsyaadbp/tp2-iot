@@ -5,7 +5,7 @@ bridge/.env
 bridge/spool*
 *.log
 wokwi/
-work/
-.DS_Store
 scripts/prepare-wokwi.js
 scripts/build-firmware.js
+work/
+.DS_Store
